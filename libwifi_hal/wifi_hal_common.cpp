@@ -19,6 +19,7 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/syscall.h>
 
 #include <android-base/logging.h>
 #include <cutils/misc.h>
@@ -50,19 +51,21 @@ static const char DRIVER_MODULE_ARG[] = WIFI_DRIVER_MODULE_ARG;
 static const char MODULE_FILE[] = "/proc/modules";
 #endif
 
-static int insmod(const char *filename, const char *args) {
-  void *module;
-  unsigned int size;
-  int ret;
-
-  module = load_file(filename, &size);
-  if (!module) return -1;
-
-  ret = init_module(module, size, args);
-
-  free(module);
-
-  return ret;
+static int insmod(const char *filename, const char *args)
+{
+  /* O_NOFOLLOW is removed as wlan.ko is symlink pointing to
+    the vendor specfic file which is in readonly location */
+  int fd = open(filename, O_RDONLY | O_CLOEXEC);
+  if (fd == -1) {
+    PLOG(DEBUG) << "insmod: open '" << filename << " failed'";
+    return -1;
+  }
+  int rc = syscall(__NR_finit_module, fd, args, 0);
+  if (rc == -1) {
+    PLOG(DEBUG) << "finit_module for '" << filename << " failed'";
+  }
+  close(fd);
+  return rc;
 }
 
 static int rmmod(const char *modname) {
