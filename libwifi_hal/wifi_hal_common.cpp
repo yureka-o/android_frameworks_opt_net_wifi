@@ -147,10 +147,14 @@ int is_wifi_driver_loaded() {
 int wifi_load_driver() {
 #ifdef WIFI_DRIVER_MODULE_PATH
   if (is_wifi_driver_loaded()) {
+    PLOG(ERROR) << "inst 1 : wifi driver not loaded";
     return 0;
   }
 
-  if (insmod(DRIVER_MODULE_PATH, DRIVER_MODULE_ARG) < 0) return -1;
+  if (insmod(DRIVER_MODULE_PATH, DRIVER_MODULE_ARG) < 0) {
+    PLOG(ERROR) << "inst 2: insmod of wifi driver failed";
+    return -1;
+  }
 #endif
 
 #ifdef WIFI_DRIVER_STATE_CTRL_PARAM
@@ -161,6 +165,7 @@ int wifi_load_driver() {
   if (wifi_change_driver_state(WIFI_DRIVER_STATE_ON) < 0) return -1;
 #endif
   property_set(DRIVER_PROP_NAME, "ok");
+  PLOG(DEBUG) << "inst 3: wifi driver loaded";
   return 0;
 }
 
